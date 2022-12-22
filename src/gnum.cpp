@@ -55,6 +55,12 @@ random(double mu, double sigma)
   return (mu + sigma * (double) X1);
 }
 
+double
+exponential(double val)
+{
+  return exp(val);
+}
+
 class mat::impl
 {
 
@@ -147,6 +153,34 @@ mat::rand(double max)
           pimpl->vals[i * pimpl->cols + j] = 0;
   }
   return *this;
+}
+
+mat
+mat::exp()
+{
+  mat ret(this->pimpl->rows, this->pimpl->cols);
+
+  uint i, j;
+
+  for (i = 0; i < pimpl->rows; i++)
+    for (j = 0; j < pimpl->cols; j++)
+      ret.set(i, j, gn::exponential(this->get(i, j)));
+
+  return ret;
+}
+
+double
+mat::sum()
+{
+  double sum = 0.0;
+
+  uint i, j;
+
+  for (i = 0; i < pimpl->rows; i++)
+    for (j = 0; j < pimpl->cols; j++)
+      sum += this->get(i, j);
+
+  return sum;
 }
 
 void

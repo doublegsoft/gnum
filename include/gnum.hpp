@@ -58,6 +58,10 @@ public:
 
   mat& rand(double max = 0);
 
+  mat exp(void);
+
+  double sum(void);
+
   /*!
   **
   */

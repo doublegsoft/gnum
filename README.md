@@ -1,3 +1,5 @@
+### Banner
+
 ```
 
    █████████  ██████   █████ █████  █████ ██████   ██████
@@ -11,3 +13,7 @@
                                                                                           
 
 ```
+
+### Change Log
+
+* added sum and exp in mat class on Dec 22, 2022.
