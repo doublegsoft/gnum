@@ -61,6 +61,12 @@ exponential(double val)
   return exp(val);
 }
 
+double
+hyperbolic_tangent(double val)
+{
+  return tanh(val);
+}
+
 class mat::impl
 {
 
@@ -165,6 +171,20 @@ mat::exp()
   for (i = 0; i < pimpl->rows; i++)
     for (j = 0; j < pimpl->cols; j++)
       ret.set(i, j, gn::exponential(this->get(i, j)));
+
+  return ret;
+}
+
+mat
+mat::tanh()
+{
+  mat ret(this->pimpl->rows, this->pimpl->cols);
+
+  uint i, j;
+
+  for (i = 0; i < pimpl->rows; i++)
+    for (j = 0; j < pimpl->cols; j++)
+      ret.set(i, j, gn::hyperbolic_tangent(this->get(i, j)));
 
   return ret;
 }
@@ -383,6 +403,37 @@ gn_mat_rand(double* mat, uint rows, uint cols)
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       mat[i * cols + j] = gn::random(0, 1);
+}
+
+int
+gn_mat_exp(double* mat, uint rows, uint cols, double** vals)
+{
+  gn::mat m(rows, cols, mat);
+  gn::mat expm = m.exp();
+  uint i, j;
+  *vals = (double*)calloc(rows * cols, sizeof(double));
+  for (i = 0; i < rows; i++)
+    for (j = 0; j < cols; j++)
+      (*vals)[i * cols + j] = expm.get(i, j);
+}
+
+int
+gn_mat_tanh(double* mat, uint rows, uint cols, double** vals)
+{
+  gn::mat m(rows, cols, mat);
+  gn::mat tanhm = m.tanh();
+  uint i, j;
+  *vals = (double*)calloc(rows * cols, sizeof(double));
+  for (i = 0; i < rows; i++)
+    for (j = 0; j < cols; j++)
+      (*vals)[i * cols + j] = tanhm.get(i, j);
+}
+
+double
+gn_mat_sum(double* mat, uint rows, uint cols)
+{
+  gn::mat m(rows, cols, mat);
+  return m.sum();
 }
 
 void

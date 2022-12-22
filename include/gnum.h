@@ -25,6 +25,15 @@ int
 gn_mat_add(double* m1, double* m2, uint rows, uint cols, double** vals);
 
 int
+gn_mat_exp(double* mat, uint rows, uint cols, double** vals);
+
+int
+gn_mat_tanh(double* mat, uint rows, uint cols, double** vals);
+
+double
+gn_mat_sum(double* mat, uint rows, uint cols);
+
+int
 gn_mat_T(double* mat, uint rows, uint cols, double** vals);
 
 int

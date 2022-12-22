@@ -60,6 +60,8 @@ public:
 
   mat exp(void);
 
+  mat tanh(void);
+
   double sum(void);
 
   /*!

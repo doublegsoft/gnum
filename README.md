@@ -16,4 +16,4 @@
 
 ### Change Log
 
-* added sum and exp in mat class on Dec 22, 2022.
+* added sum, exp and tanh in mat class and c api on Dec 22, 2022.
