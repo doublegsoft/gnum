@@ -29,7 +29,7 @@ random(double mu, double sigma)
 {
 
   double U1, U2, W, mult;
-  static double X1, X2;
+  static double X1/*, X2*/;
 //  static int call = 0;
 //
 //  if (call == 1)
@@ -48,7 +48,7 @@ random(double mu, double sigma)
 
   mult = sqrt ((-2 * log (W)) / W);
   X1 = U1 * mult;
-  X2 = U2 * mult;
+//  X2 = U2 * mult;
 
 //  call = !call;
 
@@ -348,6 +348,28 @@ mat::operator * (const double scalar)
 ********************************************************************************
 */
 
+/*!
+** matrix multiplication, A · B.
+**
+** @param m1
+**        the first matrix
+**
+** @param r1
+**        the first matrix row count
+**
+** @param c1
+**        the first matrix column count
+**
+** @param m2
+**        the second matrix
+**
+** @param r2
+**        the second matrix row count
+**
+** @param c2
+**        the second matrix column count
+**
+*/
 int
 gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** vals)
 {
@@ -355,15 +377,21 @@ gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** 
   gn::mat mat1(r1, c1, m1);
   gn::mat mat2(r2, c2, m2);
 
-  gn::mat ret = mat1 * mat2;
-
   uint i, j;
+  try
+  {
+    gn::mat ret = mat1 * mat2;
+    *vals = (double*)calloc(r1 * c2, sizeof(double));
+    for (i = 0; i < r1; i++)
+      for (j = 0; j < c2; j++)
+        (*vals)[i * c2 + j] = ret.get(i, j);
+  }
+  catch (const std::invalid_argument& e)
+  {
+     return GNUM_ERROR_MATRICES_COLUMN_NOT_EQUALS_TO_ROW;
+  }
 
-  *vals = (double*)calloc(r1 * c2, sizeof(double));
-  for (i = 0; i < r1; i++)
-    for (j = 0; j < c2; j++)
-      (*vals)[i * c2 + j] = ret.get(i, j);
-  return 0;
+  return GNUM_SUCCESS;
 }
 
 int
@@ -380,7 +408,7 @@ gn_mat_add(double* m1, double* m2, uint rows, uint cols, double** vals)
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = ret.get(i, j);
-  return 0;
+  return GNUM_SUCCESS;
 }
 
 int
@@ -394,6 +422,8 @@ gn_mat_T(double* mat, uint rows, uint cols, double** vals)
   for (i = 0; i < cols; i++)
     for (j = 0; j < rows; j++)
       (*vals)[i * rows + j] = m.get(j, i);
+
+  return GNUM_SUCCESS;
 }
 
 int
@@ -403,6 +433,7 @@ gn_mat_rand(double* mat, uint rows, uint cols)
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       mat[i * cols + j] = gn::random(0, 1);
+  return GNUM_SUCCESS;
 }
 
 int
@@ -415,6 +446,7 @@ gn_mat_exp(double* mat, uint rows, uint cols, double** vals)
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = expm.get(i, j);
+  return GNUM_SUCCESS;
 }
 
 int
@@ -427,6 +459,8 @@ gn_mat_tanh(double* mat, uint rows, uint cols, double** vals)
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = tanhm.get(i, j);
+
+  return GNUM_SUCCESS;
 }
 
 double

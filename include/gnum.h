@@ -18,6 +18,11 @@
 typedef unsigned int      uint;
 #endif
 
+#define GNUM_SUCCESS                                          0
+#define GNUM_ERROR_MATRICES_COLUMN_NOT_EQUALS_TO_ROW          200001
+#define GNUM_ERROR_MATRICES_ROW_NOT_EQUALS                    200002
+#define GNUM_ERROR_MATRICES_COLUMN_NOT_EQUALS                 200003
+
 int
 gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** vals);
 
