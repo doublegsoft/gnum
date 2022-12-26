@@ -19,10 +19,13 @@ add_library(gnum STATIC
   src/gnum.cpp
 )
 
-target_link_libraries(gnum PRIVATE 
+target_link_libraries(gnum 
+  stdc++
+  METAL_CPP
   "-framework Metal" 
   "-framework Foundation" 
   "-framework QuartzCore"
+  objc
 )
 
 
@@ -30,10 +33,16 @@ add_executable(test_gnum++
   test/test_gnum.cpp
 )
 
-target_link_libraries(test_gnum++ PRIVATE gnum)
+target_link_libraries(test_gnum++ 
+	gnum
+	METAL_CPP
+)
 
 add_executable(test_gnum
   test/test_gnum.c
 )
 
-target_link_libraries(test_gnum PRIVATE gnum)
+target_link_libraries(test_gnum 
+	gnum
+	METAL_CPP
+)

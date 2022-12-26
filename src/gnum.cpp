@@ -17,6 +17,11 @@
 
 #include <string>
 
+#ifdef __APPLE__
+#include <Foundation/Foundation.hpp>
+#include <Metal/Metal.hpp>
+#endif
+
 #include "gnum.hpp"
 
 using namespace std;
@@ -24,24 +29,89 @@ using namespace std;
 namespace gn
 {
 
-double
-random(double mu, double sigma)
+#ifdef __APPLE__
+
+static bool metal_inited = false;
+
+static MTL::Device*       device;
+static MTL::Function*     fun_add;
+
+void
+metal_init()
+{
+  if (metal_inited) return;
+
+  NS::Error* error;
+  NS::AutoreleasePool* p_pool = NS::AutoreleasePool::alloc()->init();
+  device = MTL::CreateSystemDefaultDevice();
+
+  NS::String* libpath = NS::String::string("matop.metallib", NS::UTF8StringEncoding);
+  auto lib = device->newLibrary(libpath, &error);
+  auto fn = NS::String::string("add_arrays", NS::ASCIIStringEncoding);
+  fun_add = lib->newFunction(fn);
+  metal_inited = true;
+}
+
+void
+metal_mat_add(float* v1, float* v2, uint size, float* res)
+{
+  uint i;
+  NS::Error* error;
+  MTL::Buffer* m1 = device->newBuffer(v1, size * sizeof(float), MTL::ResourceStorageModeShared);
+  MTL::Buffer* m2 = device->newBuffer(v2, size * sizeof(float), MTL::ResourceStorageModeShared);
+  MTL::Buffer* rs = device->newBuffer(res, size * sizeof(float), MTL::ResourceStorageModeShared);
+
+  MTL::ComputePipelineState*    pipeline_state  = device->newComputePipelineState(fun_add, &error);
+  MTL::CommandQueue*            command_queue   = device->newCommandQueue();
+  MTL::CommandBuffer*           command_buffer  = command_queue->commandBuffer();
+  MTL::ComputeCommandEncoder*   compute_encoder = command_buffer->computeCommandEncoder();
+
+
+  compute_encoder->setComputePipelineState(pipeline_state);
+
+  compute_encoder->setBuffer(m1, 0, 0);
+  compute_encoder->setBuffer(m2, 0, 1);
+  compute_encoder->setBuffer(rs, 0, 2);
+
+  MTL::Size grid_size = MTL::Size(size, 1, 1);
+
+  NS::UInteger thread_count = pipeline_state->maxTotalThreadsPerThreadgroup();
+  if (thread_count > size)
+  {
+    thread_count = size;
+  }
+  MTL::Size thread_group_size = MTL::Size(thread_count, 1, 1);
+  compute_encoder->dispatchThreads(grid_size, thread_group_size);
+  compute_encoder->endEncoding();
+
+  command_buffer->commit();
+  command_buffer->waitUntilCompleted();
+
+//  float* r = (float*) rs->contents();
+//  for (i = 0; i < size; i++)
+//    printf("%f + %f = %f\n", v1[i], v2[i], r[i]);
+}
+
+#endif
+
+float
+random(float mu, float sigma)
 {
 
-  double U1, U2, W, mult;
-  static double X1/*, X2*/;
+  float U1, U2, W, mult;
+  static float X1/*, X2*/;
 //  static int call = 0;
 //
 //  if (call == 1)
 //  {
 //    call = !call;
-//    return (mu + sigma * (double) X2);
+//    return (mu + sigma * (float) X2);
 //  }
 
   do
   {
-    U1 = -1 + ((double) rand() / RAND_MAX) * 2;
-    U2 = -1 + ((double) rand() / RAND_MAX) * 2;
+    U1 = -1 + ((float) rand() / RAND_MAX) * 2;
+    U2 = -1 + ((float) rand() / RAND_MAX) * 2;
     W = pow (U1, 2) + pow (U2, 2);
   }
   while ( W >= 1 || W == 0 );
@@ -52,17 +122,17 @@ random(double mu, double sigma)
 
 //  call = !call;
 
-  return (mu + sigma * (double) X1);
+  return (mu + sigma * (float) X1);
 }
 
-double
-exponential(double val)
+float
+exponential(float val)
 {
   return exp(val);
 }
 
-double
-hyperbolic_tangent(double val)
+float
+hyperbolic_tangent(float val)
 {
   return tanh(val);
 }
@@ -72,7 +142,7 @@ class mat::impl
 
 public:
 
-  double*         vals;
+  float*         vals;
 
   uint            rows;
 
@@ -82,7 +152,7 @@ public:
 
 };
 
-mat::mat(uint rows, uint cols, double* vals): pimpl(new impl())
+mat::mat(uint rows, uint cols, float* vals): pimpl(new impl())
 {
   if (rows <= 0)
     throw std::invalid_argument("the initial matrix row size is not greater than zero.");
@@ -95,7 +165,7 @@ mat::mat(uint rows, uint cols, double* vals): pimpl(new impl())
   pimpl->alloc = false;
   if (pimpl->vals == NULL)
   {
-    pimpl->vals = (double*)calloc(pimpl->rows * pimpl->cols, sizeof(double));
+    pimpl->vals = (float*)calloc(pimpl->rows * pimpl->cols, sizeof(float));
     pimpl->alloc = true;
   }
 }
@@ -123,7 +193,7 @@ mat::cols(void) const
 }
 
 mat&
-mat::set(uint row, uint col, double value)
+mat::set(uint row, uint col, float value)
 {
   if (row >= pimpl->rows)
     throw std::invalid_argument("the row index is not less than the matrix row size.");
@@ -134,7 +204,7 @@ mat::set(uint row, uint col, double value)
   return *this;
 }
 
-double
+float
 mat::get(uint row, uint col) const
 {
   if (row >= pimpl->rows || col >= pimpl->cols)
@@ -142,8 +212,14 @@ mat::get(uint row, uint col) const
   return pimpl->vals[row * pimpl->cols + col];
 }
 
+float*
+mat::values() const
+{
+  return pimpl->vals;
+}
+
 mat&
-mat::rand(double max)
+mat::rand(float max)
 {
   uint i, j;
 
@@ -189,10 +265,10 @@ mat::tanh()
   return ret;
 }
 
-double
+float
 mat::sum()
 {
-  double sum = 0.0;
+  float sum = 0.0;
 
   uint i, j;
 
@@ -256,7 +332,7 @@ mat::operator + (const mat& m)
 }
 
 mat
-mat::operator + (const double scalar)
+mat::operator + (const float scalar)
 {
   uint i, j;
   mat ret(pimpl->rows, pimpl->cols);
@@ -283,7 +359,7 @@ mat::operator - (const mat& m)
 }
 
 mat
-mat::operator - (const double scalar)
+mat::operator - (const float scalar)
 {
   uint i, j;
   mat ret(pimpl->rows, pimpl->cols);
@@ -308,11 +384,11 @@ mat::operator * (const mat& m)
   {
     for (j = 0; j < m.cols(); j++)
     {
-      double sum = 0.0;
+      float sum = 0.0;
       for (k = 0; k < pimpl->cols; k++)
       {
-        double m1_val = this->get(i, k);
-        double m2_val = m.get(k, j);
+        float m1_val = this->get(i, k);
+        float m2_val = m.get(k, j);
         sum += m1_val * m2_val;
       }
       ret.set(i, j, sum);
@@ -322,7 +398,7 @@ mat::operator * (const mat& m)
 }
 
 mat
-mat::operator * (const double scalar)
+mat::operator * (const float scalar)
 {
   uint i, j;
   mat ret(pimpl->rows, pimpl->cols);
@@ -371,7 +447,7 @@ mat::operator * (const double scalar)
 **
 */
 int
-gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** vals)
+gn_mat_mul(float* m1, uint r1, uint c1, float* m2, uint r2, uint c2, float** vals)
 {
 
   gn::mat mat1(r1, c1, m1);
@@ -381,7 +457,7 @@ gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** 
   try
   {
     gn::mat ret = mat1 * mat2;
-    *vals = (double*)calloc(r1 * c2, sizeof(double));
+    *vals = (float*)calloc(r1 * c2, sizeof(float));
     for (i = 0; i < r1; i++)
       for (j = 0; j < c2; j++)
         (*vals)[i * c2 + j] = ret.get(i, j);
@@ -395,7 +471,7 @@ gn_mat_mul(double* m1, uint r1, uint c1, double* m2, uint r2, uint c2, double** 
 }
 
 int
-gn_mat_add(double* m1, double* m2, uint rows, uint cols, double** vals)
+gn_mat_add(float* m1, float* m2, uint rows, uint cols, float** vals)
 {
   gn::mat mat1(rows, cols, m1);
   gn::mat mat2(rows, cols, m2);
@@ -404,7 +480,7 @@ gn_mat_add(double* m1, double* m2, uint rows, uint cols, double** vals)
 
   uint i, j;
 
-  *vals = (double*)calloc(rows * cols, sizeof(double));
+  *vals = (float*)calloc(rows * cols, sizeof(float));
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = ret.get(i, j);
@@ -412,13 +488,13 @@ gn_mat_add(double* m1, double* m2, uint rows, uint cols, double** vals)
 }
 
 int
-gn_mat_T(double* mat, uint rows, uint cols, double** vals)
+gn_mat_T(float* mat, uint rows, uint cols, float** vals)
 {
   gn::mat m(rows, cols, mat);
   m.transpose();
 
   uint i, j;
-  *vals = (double*)calloc(rows * cols, sizeof(double));
+  *vals = (float*)calloc(rows * cols, sizeof(float));
   for (i = 0; i < cols; i++)
     for (j = 0; j < rows; j++)
       (*vals)[i * rows + j] = m.get(j, i);
@@ -427,7 +503,7 @@ gn_mat_T(double* mat, uint rows, uint cols, double** vals)
 }
 
 int
-gn_mat_rand(double* mat, uint rows, uint cols)
+gn_mat_rand(float* mat, uint rows, uint cols)
 {
   uint i, j;
   for (i = 0; i < rows; i++)
@@ -437,12 +513,12 @@ gn_mat_rand(double* mat, uint rows, uint cols)
 }
 
 int
-gn_mat_exp(double* mat, uint rows, uint cols, double** vals)
+gn_mat_exp(float* mat, uint rows, uint cols, float** vals)
 {
   gn::mat m(rows, cols, mat);
   gn::mat expm = m.exp();
   uint i, j;
-  *vals = (double*)calloc(rows * cols, sizeof(double));
+  *vals = (float*)calloc(rows * cols, sizeof(float));
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = expm.get(i, j);
@@ -450,12 +526,12 @@ gn_mat_exp(double* mat, uint rows, uint cols, double** vals)
 }
 
 int
-gn_mat_tanh(double* mat, uint rows, uint cols, double** vals)
+gn_mat_tanh(float* mat, uint rows, uint cols, float** vals)
 {
   gn::mat m(rows, cols, mat);
   gn::mat tanhm = m.tanh();
   uint i, j;
-  *vals = (double*)calloc(rows * cols, sizeof(double));
+  *vals = (float*)calloc(rows * cols, sizeof(float));
   for (i = 0; i < rows; i++)
     for (j = 0; j < cols; j++)
       (*vals)[i * cols + j] = tanhm.get(i, j);
@@ -463,15 +539,15 @@ gn_mat_tanh(double* mat, uint rows, uint cols, double** vals)
   return GNUM_SUCCESS;
 }
 
-double
-gn_mat_sum(double* mat, uint rows, uint cols)
+float
+gn_mat_sum(float* mat, uint rows, uint cols)
 {
   gn::mat m(rows, cols, mat);
   return m.sum();
 }
 
 void
-gn_mat_debug(FILE* stream, double* mat, uint rows, uint cols)
+gn_mat_debug(FILE* stream, float* mat, uint rows, uint cols)
 {
   gn::mat m(rows, cols, mat);
   m.debug(stream);

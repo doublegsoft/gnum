@@ -12,6 +12,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "gnum.hpp"
@@ -67,6 +68,8 @@ static void
 test_perf()
 {
   printf("test perf:\n");
+
+
   int i = 0;
   double v1[] = {
     -0.094491, -0.443977,  0.313917,
@@ -83,12 +86,22 @@ test_perf()
     -0.368008,  0.424778, -0.257104, -0.148817,  0.033922,  0.353874, -0.144942,  0.130904,
      0.422434,  0.364503,  0.467865, -0.020302, -0.423890, -0.438777,  0.268529, -0.446787
   };
-  for (i = 0; i < 1000000; i++)
-  {
-    gn::mat mat0(8, 3, v1);
-    gn::mat mat1(3, 8, v2);
 
-    gn::mat res = mat0 * mat1;
+  double* rs;
+  gn::metal_init();
+
+  gn::mat mat0(10000, 300);
+  gn::mat mat1(10000, 300);
+  float* res = (float*) calloc(10000 * 300, sizeof(double));
+  mat0.rand(1);
+  mat1.rand(1);
+  for (i = 0; i < 1000; i++)
+  {
+//    gn::mat mat0(8, 3, v1);
+//    gn::mat mat1(3, 8, v2);
+//    gn::mat res = mat0 + mat1;
+
+    gn::metal_mat_add(mat0.values(), mat1.values(), 10000 * 300, res);
   }
 }
 

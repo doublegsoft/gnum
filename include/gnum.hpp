@@ -23,18 +23,24 @@ typedef unsigned int      uint;
 namespace gn
 {
 
+void
+metal_init();
+
+void
+metal_mat_add(float* v1, float* v2, uint size, float* res);
+
 /*!
 ** Gaussian generator:
 **   https://phoxis.org/2013/05/04/generating-random-numbers-from-normal-distribution-in-c/
 */
-double
-random(double mu, double sigma);
+float
+random(float mu, float sigma);
 
 class mat
 {
 public:
 
-  mat(uint rows, uint cols, double* vals = NULL);
+  mat(uint rows, uint cols, float* vals = NULL);
 
   ~mat(void);
 
@@ -51,18 +57,19 @@ public:
   /*!
   **
   */
-  mat& set(uint row, uint col, double val);
+  mat& set(uint row, uint col, float val);
 
-  double get(uint row, uint col) const;
+  float get(uint row, uint col) const;
 
+  float* values() const;
 
-  mat& rand(double max = 0);
+  mat& rand(float max = 0);
 
   mat exp(void);
 
   mat tanh(void);
 
-  double sum(void);
+  float sum(void);
 
   /*!
   **
@@ -76,15 +83,15 @@ public:
 
   mat operator + (const mat& mat);
 
-  mat operator + (const double scalar);
+  mat operator + (const float scalar);
 
   mat operator - (const mat& m);
 
-  mat operator - (const double scalar);
+  mat operator - (const float scalar);
 
   mat operator * (const mat& m);
 
-  mat operator * (const double scalar);
+  mat operator * (const float scalar);
 
 private:
 
